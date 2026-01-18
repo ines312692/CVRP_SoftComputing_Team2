@@ -58,8 +58,10 @@ def read_instance(filepath: str) -> Dict[str, Any]:
             instance['capacity'] = int(line.split(':')[-1].strip())
         elif line.startswith('COMMENT'):
             # Try to extract optimal value from comment
-            comment = line.split(':')[-1].strip()
-            opt_match = re.search(r'Optimal[:\s]+(\d+\.?\d*)', comment, re.IGNORECASE)
+            # Use split with maxsplit=1 to keep the full comment
+            comment = line.split(':', 1)[-1].strip() if ':' in line else line
+            # Match patterns like "Optimal value: 672" or "Optimal: 672" or "optimal 672"
+            opt_match = re.search(r'[Oo]ptimal\s*(?:value)?[:\s]+(\d+\.?\d*)', comment)
             if opt_match:
                 instance['optimal'] = float(opt_match.group(1))
         elif line.startswith('NODE_COORD_SECTION'):
@@ -117,7 +119,7 @@ def compute_distance_matrix(coordinates: Dict[int, Tuple[float, float]]) -> Dict
             else:
                 xi, yi = coordinates[i]
                 xj, yj = coordinates[j]
-                distance_matrix[i][j] = math.sqrt((xi - xj) ** 2 + (yi - yj) ** 2)
+                distance_matrix[i][j] = math.sqrt((xi - xj)**2 + (yi - yj)**2)
 
     return distance_matrix
 
@@ -160,7 +162,6 @@ Total demand: {sum(instance['demands'].values())}
 if __name__ == '__main__':
     # Test with a sample instance path
     import sys
-
     if len(sys.argv) > 1:
         inst = read_instance(sys.argv[1])
         print(get_instance_info(inst))
