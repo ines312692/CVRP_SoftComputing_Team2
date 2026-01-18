@@ -6,7 +6,6 @@ Team 2 - Soft Computing Contest
 
 import sys
 import os
-
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from typing import Dict, List, Any, Tuple, Optional
@@ -43,12 +42,12 @@ def two_opt_single_route(route: List[int], dm: Dict[int, Dict[int, float]]) -> T
             for j in range(i + 1, n - 1):
                 # Cost before: d(i-1,i) + d(j,j+1)
                 # Cost after: d(i-1,j) + d(i,j+1)
-                old_cost = dm[best_route[i - 1]][best_route[i]] + dm[best_route[j]][best_route[j + 1]]
-                new_cost = dm[best_route[i - 1]][best_route[j]] + dm[best_route[i]][best_route[j + 1]]
+                old_cost = dm[best_route[i-1]][best_route[i]] + dm[best_route[j]][best_route[j+1]]
+                new_cost = dm[best_route[i-1]][best_route[j]] + dm[best_route[i]][best_route[j+1]]
 
                 if new_cost < old_cost - 1e-10:
                     # Reverse segment [i, j]
-                    best_route[i:j + 1] = best_route[i:j + 1][::-1]
+                    best_route[i:j+1] = best_route[i:j+1][::-1]
                     total_improvement += old_cost - new_cost
                     improved = True
                     break
@@ -128,7 +127,7 @@ def or_opt(solution: List[List[int]], instance: Dict[str, Any],
                             base_route2 = route2
                             # Check capacity
                             if (get_route_load(base_route2, demands, depot) +
-                                    segment_demand > capacity):
+                                segment_demand > capacity):
                                 continue
 
                         # Try all insertion positions
@@ -139,8 +138,8 @@ def or_opt(solution: List[List[int]], instance: Dict[str, Any],
                             # Create new route2 with segment
                             new_route2 = base_route2[:j] + segment + base_route2[j:]
 
-                            # Build new solution
-                            new_solution = best_solution[:]
+                            # Build new solution (deep copy to avoid corruption)
+                            new_solution = [r[:] for r in best_solution]
                             if r1_idx == r2_idx:
                                 new_solution[r1_idx] = new_route2
                             else:
@@ -226,12 +225,19 @@ def exchange(solution: List[List[int]], instance: Dict[str, Any]) -> List[List[i
 
                         # Create new routes
                         new_route1 = route1[:]
-                        new_route2 = route2[:]
-                        new_route1[i] = c2
-                        new_route2[j] = c1
+                        if r1_idx == r2_idx:
+                            # Same route: swap within the same route copy
+                            new_route1[i] = c2
+                            new_route1[j] = c1
+                            new_route2 = new_route1  # Same route
+                        else:
+                            # Different routes
+                            new_route2 = route2[:]
+                            new_route1[i] = c2
+                            new_route2[j] = c1
 
-                        # Build new solution
-                        new_solution = best_solution[:]
+                        # Build new solution (deep copy to avoid corruption)
+                        new_solution = [r[:] for r in best_solution]
                         new_solution[r1_idx] = new_route1
                         if r1_idx != r2_idx:
                             new_solution[r2_idx] = new_route2
@@ -292,10 +298,10 @@ def cross_exchange(solution: List[List[int]], instance: Dict[str, Any]) -> List[
 
                         # Check capacity
                         if (get_route_load(new_route1, demands, depot) > capacity or
-                                get_route_load(new_route2, demands, depot) > capacity):
+                            get_route_load(new_route2, demands, depot) > capacity):
                             continue
 
-                        new_solution = best_solution[:]
+                        new_solution = [r[:] for r in best_solution]
                         new_solution[r1_idx] = new_route1
                         new_solution[r2_idx] = new_route2
 
@@ -320,8 +326,8 @@ def cross_exchange(solution: List[List[int]], instance: Dict[str, Any]) -> List[
 # =============================================================================
 
 def local_search(solution: List[List[int]], instance: Dict[str, Any],
-                 operators: Optional[List[str]] = None,
-                 max_iterations: int = 1000) -> Tuple[List[List[int]], Dict[str, Any]]:
+                operators: Optional[List[str]] = None,
+                max_iterations: int = 1000) -> Tuple[List[List[int]], Dict[str, Any]]:
     """
     Combined local search using multiple operators.
 
@@ -467,14 +473,13 @@ if __name__ == '__main__':
 
     # Compute distance matrix
     from common.cost import compute_distance_matrix
-
     instance['distance_matrix'] = {}
     for i in instance['coordinates']:
         instance['distance_matrix'][i] = {}
         for j in instance['coordinates']:
             xi, yi = instance['coordinates'][i]
             xj, yj = instance['coordinates'][j]
-            instance['distance_matrix'][i][j] = ((xi - xj) ** 2 + (yi - yj) ** 2) ** 0.5
+            instance['distance_matrix'][i][j] = ((xi-xj)**2 + (yi-yj)**2)**0.5
 
     # Get initial solution
     initial = nearest_neighbor(instance)
